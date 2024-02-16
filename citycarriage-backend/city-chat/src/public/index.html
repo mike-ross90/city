@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chat Example</title>
+  </head>
+  <body>
+    <h1>Chat Example</h1>
+    <div>
+      <button onclick="getChatHistory()">Refresh</button>
+      <input type="text" id="senderId" placeholder="Your ID">
+      <input type="text" id="recipientId" placeholder="Recipient ID">
+      <input type="text" id="message" placeholder="Message">
+      <button onclick="authenticateAndConnect()">Connect</button>
+      <button onclick="sendMessage()">Send</button>
+<br/>
+<input type="file" id="imageInput" accept="image/*">
+<div id="imageList"></div>
+
+    </div>
+    <div id="chat"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+
+
+//Image Upload
+
+const imageInput = document.getElementById('imageInput');
+        const resetButton = document.getElementById('resetButton');
+        const imageList = document.getElementById('imageList');
+        let selectedImage = null;
+
+        imageInput.addEventListener('change', () => {
+            const file = imageInput.files[0];
+            if (file) {
+                selectedImage = file;
+                uploadImage(selectedImage);
+            }
+        });
+     
+        function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                const img = new Image();
+                img.src = data.imageUrl;
+                imageList.innerHTML = ''; // Clear the previously displayed images
+                imageList.appendChild(img);
+            });
+        }
+
+
+
+    
+      function authenticateAndConnect() {
+        const userId = document.getElementById('senderId').value;
+        socket.emit('authenticate', userId);
+      }
+    
+      const getChatHistory = () => {
+        const senderId = document.getElementById('senderId').value;
+        const recipientId = document.getElementById('recipientId').value;
+        socket.emit('getChatHistory', { from: senderId, to: recipientId });
+      }
+    
+      function sendMessage() {
+        const senderId = document.getElementById('senderId').value;
+        const recipientId = document.getElementById('recipientId').value;
+        const message = document.getElementById('message').value;
+
+        selectedImage = null;
+            imageInput.value = ''; // Clear the file input
+            imageList.innerHTML = ''; // Clear the displayed images
+
+
+        // Send the message to your server, which will then publish it to Kafka
+        fetch('/sendToKafka', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ from: senderId, to: recipientId, message }),
+        }).then(response => {
+          if (response.status === 200) {
+            console.log('Message sent to Kafka');
+      
+          } else {
+            console.error('Failed to send message to Kafka');
+          }
+        });
+      }
+    
+      socket.on('privateMessage', ({ from, message }) => {
+        const chatDiv = document.getElementById('chat');
+        chatDiv.innerHTML += `<p><strong>${from}:</strong> ${message}</p>`;
+      });
+    
+      socket.on('chatHistory', (messages) => {
+        const chatDiv = document.getElementById('chat');
+        chatDiv.innerHTML = ''; // Clear previous messages
+        messages.forEach(({ sender, content }) => {
+          chatDiv.innerHTML += `<p><strong>${sender}:</strong> ${content}</p>`;
+        });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,49 @@
+<script src="/socket.io/socket.io.js"></script>
+
+<h1>DRIVER</h1>
+<ul id="location">
+
+</ul>
+<p id="random"></p>
+<script>
+ 
+
+
+
+
+   
+    const socket = io('http://localhost:9000/')
+
+    socket.on("serverConnect",(msg)=>{
+        console.log(msg)
+    })
+
+//     setInterval(() => {
+//         let locationValue = Math.random() * 100;
+//         socket.emit("location" , `This is my location ${locationValue}` )
+// }, 2000);
+
+
+
+
+
+let liElement = document.getElementById('location')
+
+socket.on("updatedLocation",(msg)=>{
+        console.log(msg)
+        
+        liElement.innerHTML += `<li>${msg}<li/>`
+    })
+
+
+
+
+   
+
+
+
+
+
+
+    
+</script>
